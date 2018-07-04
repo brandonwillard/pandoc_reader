@@ -1,3 +1,3 @@
 pelican
 pypandoc
-frontmatter
+python-frontmatter
