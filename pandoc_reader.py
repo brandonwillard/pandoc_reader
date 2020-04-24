@@ -4,7 +4,7 @@ import pypandoc
 import frontmatter
 
 from pelican import signals
-from pelican.readers import BaseReader
+from pelican.readers import BaseReader, logger
 
 
 class PandocReader(BaseReader):
@@ -31,6 +31,9 @@ class PandocReader(BaseReader):
         return metadata_res
 
     def read(self, filename):
+
+        logger.info('pandoc_reader reading file %s.', filename)
+
         metadata = self.read_metadata(filename)
 
         bib_dir = self.settings.get('PANDOC_BIBDIR', '')
@@ -38,17 +41,26 @@ class PandocReader(BaseReader):
         extra_args = self.settings.get('PANDOC_ARGS', [])
         filters = self.settings.get('PANDOC_FILTERS', [])
         extensions = self.settings.get('PANDOC_EXTENSIONS', '')
+
         if isinstance(extensions, list):
             extensions = ''.join(extensions)
 
         if "bibliography" in metadata.keys():
             bib_file = os.path.join(bib_dir, metadata['bibliography'])
+
+            if not os.path.exists(bib_file):
+                logger.warn('Missing bibliography file %s for article %s.', bib_file, filename)
+            else:
+                logger.info('Bibliography file %s found for article %s.', bib_file, filename)
+
             extra_args = extra_args + ['--bibliography={}'.format(bib_file)]
 
             if bib_header is not None:
                 extra_args = extra_args + [
                     '--metadata=reference-section-title="{}"'.format(
                         bib_header)]
+        else:
+            logger.info('Bibliography not specified for file %s', filename)
 
         output = pypandoc.convert_file(filename,
                                        to=self.output_format,
